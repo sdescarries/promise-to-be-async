@@ -1,11 +1,34 @@
-import { useState } from 'react';
-import logo from './logo.svg';
+import { useEffect, useState } from 'react';
 import './App.css';
 
-let globalBusy = false;
+const doubleClick = (id: string) => {
+  const element = window.document.getElementById(id);
+  element?.click();
+  element?.click();
+}
 
-const sleepPromise = (delay: number) => 
-  new Promise(done => setTimeout(done, delay));
+Object.assign(window, { doubleClick });
+
+let globalBusy: boolean = false;
+
+const trace = () => {
+	//debugger;
+}
+
+function sleepPromise(delay: number = 100) {
+	trace();
+	return Promise
+		.resolve()
+		.then(() => 
+			new Promise<void>(done => {
+				trace();
+				setTimeout(() => {
+					trace();
+					done();
+				}, delay);
+			})
+		);
+}
 
 const Button = (props: any) => (
   <button className='Button' {...props}>
@@ -32,74 +55,78 @@ function useBusy(): [boolean, Function] {
   return [busy, wrapper];
 }
 
+function useAsyncJob(): [number, Function] {
+	const [counter, setCounter] = useState<number>(0);
+
+	useEffect(() => console.log(`Use doubleClick(<id>) to stress test`), []);
+	useEffect(() => {
+		const timeout = setTimeout(() => setCounter(counter + 1), 100);
+		return () => clearTimeout(timeout);
+	}, [counter]);
+
+	const job = () => 
+	sleepPromise(1000)
+	.then(() => setCounter(0));
+
+	return [counter, job];
+}
+
+const logTime = (cb: Function) => () => {
+	console.log(`${Date.now()} click enter`);
+	cb();
+	console.log(`${Date.now()} click exit`);
+}
+
 export function App() {
 
   const [busy, setBusy] = useBusy();
+	const [counter, job] = useAsyncJob();
 
-  const badHandler = () => 
-    Promise
-      .resolve()
-      .then(() => setBusy(true))
-      .then(() => sleepPromise(1000))
-      .then(() => setBusy(false));
+	const a = () => {
+		setBusy(true);
+		alert('hold it');
+		setBusy(false);
+	};
 
-  const asyncHandler = async () => {
+  const b = async () => {
     setBusy(true);
-    await sleepPromise(1000);
+    await job();
     setBusy(false);
   };
 
-  const nestedHandler = async () => {
+  const c = async () => {
     await Promise.resolve();
-    await asyncHandler();
+    await b();
   };
 
-  const goodHandler = () => {
+  const d = () => 
+    Promise
+      .resolve()
+      .then(() => setBusy(true))
+      .then(() => job())
+      .finally(() => setBusy(false));
+
+  const e = () => {
     setBusy(true);
-    return sleepPromise(1000)
-      .then(() => setBusy(false));
+    return job()
+      .finally(() => setBusy(false));
   };
-
-  const logTime = (cb: Function) => () => {
-    console.log(`${Date.now()} click enter`);
-    cb();
-    console.log(`${Date.now()} click exit`);
-  }
-
-  console.log(`${Date.now()} render ${busy}`);
 
   return (
     <div className="App">
       <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+				<p>idle counter: {counter}</p>
+				<p>{busy ? 'busy' : 'ready'}</p>
         <div className='Actions'>
-          <Button disabled={busy} id='async' onClick={logTime(asyncHandler)} />
-          <Button disabled={busy} id='good' onClick={logTime(goodHandler)} />
-          <Button disabled={busy} id='bad' onClick={logTime(badHandler)} />
-          <Button disabled={busy} id='nested' onClick={logTime(nestedHandler)} />
+					<Button disabled={busy} id='a' onClick={logTime(a)} />
+          <Button disabled={busy} id='b' onClick={logTime(b)} />
+          <Button disabled={busy} id='c' onClick={logTime(c)} />
+          <Button disabled={busy} id='d' onClick={logTime(d)} />
+          <Button disabled={busy} id='e' onClick={logTime(e)} />
         </div>
       </header>
     </div>
   );
 }
-
-const doubleClick = (id: string) => {
-  const element = window.document.getElementById(id);
-  element?.click();
-  element?.click();
-}
-
-Object.assign(window, { doubleClick });
 
 export default App;
