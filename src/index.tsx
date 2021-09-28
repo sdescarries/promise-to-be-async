@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { doubleClick } from './tools';
+
+Object.assign(window, { doubleClick });
 
 ReactDOM.render(
   <React.StrictMode>
