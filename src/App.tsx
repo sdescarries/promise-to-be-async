@@ -41,6 +41,13 @@ const makeCallbacks = ({ setBusy, job }: Hooks) => Object.entries<ButtonCb>({
 			.then(() => setBusy(true))
 			.then(() => job())
 			.finally(() => setBusy(false)),
+	
+	f: () =>
+		Promise.reject(new Error('0xDEADBEEF')),
+
+	g: () => {
+		throw new Error('L33TH@X0R');
+	}
 
 }).map(toTimeLoggedFunction);
 
